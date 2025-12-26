@@ -12,7 +12,7 @@ GMAIL_EMAIL = os.getenv("GMAIL_EMAIL")
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
 RECEIVER_EMAILS = os.getenv("RECEIVER_EMAILS")
 SMTP_SERVER = "smtp.gmail.com"
-CUSTOM_NICKNAME = "📩Trump Truth快讯"
+CUSTOM_NICKNAME = "📩懂王快讯"
 
 # ---------------------- 基础配置（不用改） ----------------------
 RSS_URL = "https://www.trumpstruth.org/feed"
@@ -137,7 +137,7 @@ def make_email_content(all_news):
 
     email_title_html = f"""
     <p style='margin: 0 0 20px 0; padding: 10px; background-color:#2D2D2D; border-left:4px solid {title_color};'>
-        <strong><span style='color:{title_color}; font-size:20px;'>♥️ Trump Truth 每日速递</span></strong>
+        <strong><span style='color:{title_color}; font-size:20px;'>♥️ 「7*24速递」</span></strong>
     </p>
     """
 
@@ -193,7 +193,7 @@ def send_email(html_content):
             msg = MIMEText(html_content, "html", "utf-8")
             msg["From"] = f"{CUSTOM_NICKNAME} <{GMAIL_EMAIL}>"
             msg["To"] = receiver
-            msg["Subject"] = f"⏰ Trump Truth 每日资讯 | {bj_date}"
+            msg["Subject"] = f"⏰ | {bj_date}"
             smtp.sendmail(GMAIL_EMAIL, [receiver], msg.as_string())
             print(f"✅ 已发送给：{receiver}")
 
