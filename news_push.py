@@ -119,7 +119,7 @@ def check_push():
         print(f"ℹ️  无新资讯，本次跳过推送")
         return False, None
 
-# ✅ 核心修改：替换为👉、删除→符号，保留竖线对齐
+# ✅ 核心修改：调小卡片间距和内部行间距
 def make_email_content(all_news):
     if not all_news:
         return "<p style='font-size:16px; color:#FFFFFF;'>暂无可用的Trump Truth资讯</p>"
@@ -136,7 +136,7 @@ def make_email_content(all_news):
     serial_width = "35px"    # 序号固定宽度
 
     email_title_html = f"""
-    <p style='margin: 0 0 20px 0; padding: 10px; background-color:#2D2D2D; border-left:4px solid {title_color};'>
+    <p style='margin: 0 0 12px 0; padding: 8px; background-color:#2D2D2D; border-left:4px solid {title_color};'>
         <strong><span style='color:{title_color}; font-size:20px;'>♥️ 「7*24速递」</span></strong>
     </p>
     """
@@ -147,17 +147,17 @@ def make_email_content(all_news):
         show_time = get_show_time(news)
         forward_tag, content_text = parse_news_type_and_content(news)
         
-        # 替换大拇指为👉、删除查看原文后的→
+        # 调小卡片间距（15px→6px）、内部行间距（12px→6px）
         news_items.append(f"""
-        <div style='margin: 0 0 15px 0; padding: 10px; background-color:#2D2D2D; border-radius:4px;'>
+        <div style='margin: 0 0 6px 0; padding: 8px; background-color:#2D2D2D; border-radius:4px;'>
             <div style='display: flex; align-items: flex-start;'>
                 <span style='color:{serial_color}; font-size:15px; font-weight:bold; min-width: {serial_width};'>{i}.</span>
                 <div style='flex: 1;'>
-                    <p style='margin: 0 0 12px 0; padding: 0; line-height:1.6;'>
+                    <p style='margin: 0 0 6px 0; padding: 0; line-height:1.5;'>
                         <span style='color:{time_color}; font-weight: bold; font-size:15px;'>【{show_time}】</span>
                         <span style='color:{forward_color}; font-weight: bold; font-size:15px; margin: 0 8px;'>{forward_tag}</span>
                     </p>
-                    <p style='margin: 0 0 12px 0; padding: 0 0 0 {align_indent}; font-size:16px; color:{content_color};'>
+                    <p style='margin: 0 0 6px 0; padding: 0 0 0 {align_indent}; font-size:16px; color:{content_color};'>
                         {content_text}
                     </p>
                     <p style='margin: 0; padding: 0 0 0 {align_indent}; line-height:1.4;'>
