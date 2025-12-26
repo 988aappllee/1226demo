@@ -119,7 +119,7 @@ def check_push():
         print(f"ℹ️  无新资讯，本次跳过推送")
         return False, None
 
-# ✅ 核心修改：实现时间、懂王、👉查看原文统一对齐（仅改此函数）
+# ✅ 核心修改：替换为👉、删除→符号，保留竖线对齐
 def make_email_content(all_news):
     if not all_news:
         return "<p style='font-size:16px; color:#FFFFFF;'>暂无可用的Trump Truth资讯</p>"
@@ -131,7 +131,9 @@ def make_email_content(all_news):
     forward_color = "#C8102E" # 【转发贴】红色
     content_color = "#FFFFFF" # 【懂王】内容白色
     link_color = "#1E90FF"   # 链接蓝色
-    indent = "24px"  # 统一缩进值，可根据需要调整
+    arrow_color = "#FFCC00"  # 👉图标黄色（匹配截图）
+    align_indent = "22px"    # 【】竖线对齐的缩进值
+    serial_width = "35px"    # 序号固定宽度
 
     email_title_html = f"""
     <p style='margin: 0 0 20px 0; padding: 10px; background-color:#2D2D2D; border-left:4px solid {title_color};'>
@@ -145,23 +147,23 @@ def make_email_content(all_news):
         show_time = get_show_time(news)
         forward_tag, content_text = parse_news_type_and_content(news)
         
-        # 用Flex布局让序号单独占位置，内容区统一缩进实现对齐
+        # 替换大拇指为👉、删除查看原文后的→
         news_items.append(f"""
         <div style='margin: 0 0 15px 0; padding: 10px; background-color:#2D2D2D; border-radius:4px;'>
             <div style='display: flex; align-items: flex-start;'>
-                <!-- 序号固定宽度，确保内容区起始位置一致 -->
-                <span style='color:{serial_color}; font-size:15px; font-weight:bold; min-width: 28px;'>{i}.</span>
-                <!-- 内容区：时间、懂王、查看原文统一在这个容器里，实现对齐 -->
+                <span style='color:{serial_color}; font-size:15px; font-weight:bold; min-width: {serial_width};'>{i}.</span>
                 <div style='flex: 1;'>
-                    <p style='margin: 0 0 8px 0; padding: 0; line-height:1.6; color:{time_color}; font-weight: bold; font-size:15px;'>
-                        【{show_time}】<span style='color:{forward_color};'>{forward_tag}</span>
+                    <p style='margin: 0 0 12px 0; padding: 0; line-height:1.6;'>
+                        <span style='color:{time_color}; font-weight: bold; font-size:15px;'>【{show_time}】</span>
+                        <span style='color:{forward_color}; font-weight: bold; font-size:15px; margin: 0 8px;'>{forward_tag}</span>
                     </p>
-                    <p style='margin: 0 0 8px 0; padding: 0 0 0 {indent}; font-size:16px; color:{content_color};'>
+                    <p style='margin: 0 0 12px 0; padding: 0 0 0 {align_indent}; font-size:16px; color:{content_color};'>
                         {content_text}
                     </p>
-                    <p style='margin: 0; padding: 0 0 0 {indent}; line-height:1.4;'>
-                        👉 <a href='{news_link}' target='_blank' style='color:{link_color}; text-decoration: none; font-size:14px; border-bottom:1px solid {link_color};'>
-                            查看原文 →
+                    <p style='margin: 0; padding: 0 0 0 {align_indent}; line-height:1.4;'>
+                        <span style='color:{arrow_color}; font-size:16px;'>👉</span>
+                        <a href='{news_link}' target='_blank' style='color:{link_color}; text-decoration: none; font-size:14px;'>
+                            查看原文
                         </a>
                     </p>
                 </div>
