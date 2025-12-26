@@ -11,10 +11,10 @@ GMAIL_EMAIL = os.getenv("GMAIL_EMAIL")
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
 RECEIVER_EMAILS = os.getenv("RECEIVER_EMAILS")
 SMTP_SERVER = "smtp.gmail.com"
-CUSTOM_NICKNAME = "📩懂王速递"
+CUSTOM_NICKNAME = "📩Trump Truth快讯"  # 发件人昵称
 
-# ---------------------- 基础配置（路透社Feed，不用改） ----------------------
-RSS_URL = "https://www.trumpstruth.org/feed"  # 路透社资讯源
+# ---------------------- 基础配置（已绑定目标Feed地址） ----------------------
+RSS_URL = "https://www.trumpstruth.org/feed"  # 目标RSS地址
 LAST_LINK_FILE = "last_link.txt"  # 防重复推送的历史链接文件
 REQUEST_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -22,33 +22,55 @@ REQUEST_HEADERS = {
     "Connection": "keep-alive"
 }
 
-# 提取资讯时间（分时优先，否则月日，不用改）
+# 优化：增强资讯时间提取逻辑（适配更多格式）
 def get_show_time(news):
+    # 尝试从content中提取时间（原逻辑+扩展格式）
     content = news.get("content", [{}])[0].get("value", "") if news.get("content") else ""
+    time_patterns = [
+        r'(\d{2}:\d{2})<\/time>',  # 原格式：HH:MM</time>
+        r'(\d{2}:\d{2}:\d{2})',    # 扩展：HH:MM:SS
+        r'(\d{1,2}:\d{2}\s*[AP]M)',# 扩展：12小时制（如 9:30 AM）
+    ]
+    for pattern in time_patterns:
+        match = re.search(pattern, content, re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+    
+    # 从updated/published字段提取（兼容ISO格式和普通格式）
+    time_str = news.get("updated", news.get("published", ""))
+    if not time_str:
+        return "未知时间"
+    
+    # 处理ISO格式（2025-12-26T15:30:00+00:00）
+    if 'T' in time_str:
+        time_part = time_str.split('T')[1].split('+')[0].split('-')[0]
+        if ':' in time_part:
+            return time_part[:5]  # 保留HH:MM
+    # 处理普通格式（如 "December 26, 2025 15:30"）
+    elif re.search(r'\d{2}:\d{2}', time_str):
+        return re.search(r'\d{2}:\d{2}', time_str).group(0)
+    
+    # 最终 fallback 到月日格式
     try:
-        pattern = r'(\d{2}:\d{2})<\/time>'
-        hour_min = re.search(pattern, content).group(1)
-        return hour_min
+        date_obj = datetime.datetime.strptime(time_str.split('T')[0], "%Y-%m-%d")
+        return date_obj.strftime("%m-%d")  # 格式：12-26
     except:
-        updated_str = news.get("updated", news.get("published", ""))
-        date_part = updated_str.split('T')[0]
-        month_day = '-'.join(date_part.split('-')[1:])
-        return month_day
+        return "未知时间"
 
-# 抓取路透社资讯（不用改）
+# 抓取Trump Truth资讯（不用改）
 def fetch_news():
     try:
         response = requests.get(RSS_URL, headers=REQUEST_HEADERS, timeout=15)
         response.raise_for_status()
         news_list = feedparser.parse(response.content).entries
         if not news_list:
-            print("📭 未抓取到任何路透资讯")
+            print("📭 未抓取到任何Trump Truth资讯")
             return None, None
         latest_link = news_list[0]["link"].strip()
-        print(f"📭 成功抓取到{len(news_list)}条路透资讯")
+        print(f"📭 成功抓取到{len(news_list)}条Trump Truth资讯")
         return news_list, latest_link
     except Exception as e:
-        print(f"❌ 资讯抓取失败：{str(e)}")
+        print(f"❌ Trump Truth资讯抓取失败：{str(e)}")
         return None, None
 
 # 检查是否需要推送（防重复，不用改）
@@ -71,45 +93,51 @@ def check_push():
     if is_first_run or current_latest_link != last_saved_link:
         with open(LAST_LINK_FILE, 'w', encoding='utf-8') as f:
             f.write(current_latest_link)
-        print("🚨 新资讯检测到，准备推送！")
+        print("🚨 新的Trump Truth资讯检测到，准备推送！")
         return True, all_news
     else:
-        print("ℹ️  无新资讯，本次跳过推送")
+        print("ℹ️  无新的Trump Truth资讯，本次跳过推送")
         return False, None
 
-# 生成邮件HTML内容（样式固定，不用改）
+# 优化：调整邮件样式（颜色+字体+间距）
 def make_email_content(all_news):
     if not all_news:
-        return "暂无可用的路透资讯"
+        return "<p style='font-size:16px; color:#333;'>暂无可用的Trump Truth资讯</p>"
     news_list = all_news[:300]  # 最多推300条
 
-    # 颜色配置（保持美观，不用改）
-    title_color = "#2E4057"
-    time_color = "#FFB400"
-    serial_color = "#1E88E5"
-    news_title_color = "#333333"
-    link_color = "#143060"
+    # 优化颜色配置（更贴合主题，视觉更醒目）
+    title_color = "#C8102E"    # 主标题红色（贴合Trump相关视觉）
+    time_color = "#FF8C00"     # 时间橙色（突出时效性）
+    serial_color = "#003366"   # 序号深蓝色（清晰区分）
+    news_title_color = "#1A1A1A"# 资讯标题深灰（易读）
+    link_color = "#0066CC"     # 链接蓝色（醒目且不刺眼）
 
-    # 邮件标题部分
+    # 邮件标题部分（增大字体+加粗+间距）
     email_title_html = f"""
-    <p><strong><span style='color:{title_color};'>♥️「路透速递」</span></strong></p>
+    <p style='margin: 0 0 20px 0; padding: 10px; background-color:#F5F5F5; border-left:4px solid {title_color};'>
+        <strong><span style='color:{title_color}; font-size:20px;'>♥️ Trump Truth 每日速递</span></strong>
+    </p>
     """
 
-    # 资讯列表部分
+    # 资讯列表部分（优化字体大小+行高+间距）
     news_items = []
     for i, news in enumerate(news_list, 1):
         news_link = news["link"]
         news_title = news["title"]
         show_time = get_show_time(news)
         news_items.append(f"""
-        <p style='margin: 8px 0; padding: 0;'>
-            <span style='color:{serial_color}; font-size: 16px;'>{i}</span>. 
-            【<span style='color:{time_color}; font-weight: bold; font-size: 16px;'>{show_time}</span>】
-            <span style='color:{news_title_color}; font-size: 16px;'>{news_title}</span>
-        </p>
-        <p style='margin: 0 0 12px 0; padding: 0;'>
-            👉 <a href='{news_link}' target='_blank' style='color:{link_color}; text-decoration: underline; font-size: 14px;'>原文链接</a>
-        </p>
+        <div style='margin: 0 0 15px 0; padding: 10px; background-color:#FAFAFA; border-radius:4px;'>
+            <p style='margin: 0 0 8px 0; padding: 0; line-height:1.6;'>
+                <span style='color:{serial_color}; font-size:15px; font-weight:bold;'>{i}.</span> 
+                <span style='color:{time_color}; font-weight: bold; font-size:15px; margin:0 8px;'>【{show_time}】</span>
+                <span style='color:{news_title_color}; font-size:16px;'>{news_title}</span>
+            </p>
+            <p style='margin: 0; padding: 0; line-height:1.4;'>
+                👉 <a href='{news_link}' target='_blank' style='color:{link_color}; text-decoration: none; font-size:14px; border-bottom:1px solid {link_color};'>
+                    查看原文 →
+                </a>
+            </p>
+        </div>
         """)
 
     return email_title_html + "".join(news_items)
@@ -131,7 +159,7 @@ def send_email(html_content):
         # 连接Gmail SMTP服务器
         smtp = smtplib.SMTP_SSL(SMTP_SERVER, 465, timeout=20)
         smtp.login(GMAIL_EMAIL, GMAIL_APP_PASSWORD)
-        print(f"✅ Gmail连接成功，即将向{len(receivers)}个收件人发送邮件")
+        print(f"✅ Gmail连接成功，即将向{len(receivers)}个收件人发送Trump Truth资讯邮件")
 
         # 获取当前北京时间（东八区）
         current_bj_time = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8)))
@@ -142,19 +170,19 @@ def send_email(html_content):
             msg = MIMEText(html_content, "html", "utf-8")
             msg["From"] = f"{CUSTOM_NICKNAME} <{GMAIL_EMAIL}>"
             msg["To"] = receiver
-            msg["Subject"] = f"⏰｜{bj_date}"  # 邮件标题（时间标识+日期）
+            msg["Subject"] = f"⏰ Trump Truth 每日资讯 | {bj_date}"  # 优化邮件主题格式
             smtp.sendmail(GMAIL_EMAIL, [receiver], msg.as_string())
-            print(f"✅ 已发送给：{receiver}")
+            print(f"✅ Trump Truth资讯已发送给：{receiver}")
 
         smtp.quit()
-        print("✅ 所有邮件发送完成！")
+        print("✅ 所有Trump Truth资讯邮件发送完成！")
     except smtplib.SMTPAuthenticationError:
         print("""❌ Gmail登录失败！请检查：
         1. Secrets里的邮箱/密码是否正确；
         2. Gmail是否开启「两步验证」；
         3. 应用专用密码是否有效（重新生成试试）。""")
     except Exception as e:
-        print(f"❌ 邮件发送失败：{str(e)}")
+        print(f"❌ Trump Truth资讯邮件发送失败：{str(e)}")
         raise
 
 # ---------------------- 程序入口（不用改） ----------------------
@@ -164,6 +192,7 @@ if __name__ == "__main__":
     cst_now = (datetime.datetime.utcnow() + datetime.timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
     print(f"==================================================")
     print(f"📅 执行时间 | UTC：{utc_now} | 东八区：{cst_now}")
+    print(f"📡 订阅源 | Trump Truth（{RSS_URL}）")
     print(f"==================================================")
 
     try:
@@ -172,7 +201,8 @@ if __name__ == "__main__":
         if need_push and news_data:
             email_html = make_email_content(news_data)
             send_email(email_html)
-        print(f"🎉 本次流程结束")
+        print(f"🎉 本次Trump Truth资讯推送流程结束")
     except Exception as e:
-        print(f"💥 程序异常：{str(e)}")
+        print(f"💥 Trump Truth资讯推送程序异常：{str(e)}")
         raise
+
