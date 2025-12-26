@@ -57,6 +57,41 @@ def get_show_time(news):
     except:
         return "未知时间"
 
+# 新增：提取有效标题（解决[No Title]问题）
+def get_valid_title(news):
+    # 1. 获取原始标题并清洗
+    raw_title = news.get("title", "").strip()
+    # 排除无标题标识和无效内容
+    no_title_flags = ["[No Title]", "no title", "untitled", "- Post from "]
+    is_empty_title = not raw_title or any(flag in raw_title for flag in no_title_flags)
+    
+    if not is_empty_title:
+        return raw_title
+    
+    # 2. 从content正文提取标题（适配转发内容）
+    content = news.get("content", [{}])[0].get("value", "") if news.get("content") else ""
+    # 匹配正文里的标题/核心内容（简单正则，可根据源站调整）
+    content_title_patterns = [
+        r'<h1.*?>(.*?)<\/h1>',  # 匹配h1标题
+        r'<h2.*?>(.*?)<\/h2>',  # 匹配h2标题
+        r'<strong.*?>(.*?)<\/strong>',  # 匹配加粗核心内容
+        r'^[\w\s\!\?\:]+',  # 匹配开头的纯文本内容
+    ]
+    for pattern in content_title_patterns:
+        match = re.search(pattern, content, re.IGNORECASE | re.DOTALL)
+        if match:
+            extracted = match.group(1).strip()
+            if extracted and len(extracted) > 5:  # 过滤过短内容
+                return f"【转发】{extracted[:80]}"  # 截断过长内容
+    
+    # 3. 从summary/description提取
+    summary = news.get("summary", "").strip() or news.get("description", "").strip()
+    if summary and len(summary) > 5:
+        return f"【转发】{summary[:80]}"
+    
+    # 4. 最终自定义占位符
+    return "【转发内容】"
+
 # 抓取Trump Truth资讯（不用改）
 def fetch_news():
     try:
@@ -99,7 +134,7 @@ def check_push():
         print("ℹ️  无新的Trump Truth资讯，本次跳过推送")
         return False, None
 
-# 优化：调整邮件样式（颜色+字体+间距）
+# 优化：调整邮件样式（颜色+字体+间距）+ 调用新标题提取函数
 def make_email_content(all_news):
     if not all_news:
         return "<p style='font-size:16px; color:#333;'>暂无可用的Trump Truth资讯</p>"
@@ -123,7 +158,7 @@ def make_email_content(all_news):
     news_items = []
     for i, news in enumerate(news_list, 1):
         news_link = news["link"]
-        news_title = news["title"]
+        news_title = get_valid_title(news)  # 调用新的标题提取函数
         show_time = get_show_time(news)
         news_items.append(f"""
         <div style='margin: 0 0 15px 0; padding: 10px; background-color:#FAFAFA; border-radius:4px;'>
@@ -163,7 +198,7 @@ def send_email(html_content):
 
         # 获取当前北京时间（东八区）
         current_bj_time = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8)))
-        bj_date = current_bj_time.strftime("%Y-%m-%d")  # 格式：2025-12-17
+        bj_date = current_bj_time.strftime("%Y-%m-%d")  # 格式：2025-12-26
 
         # 逐个发送邮件（收件人仅可见自己）
         for receiver in receivers:
