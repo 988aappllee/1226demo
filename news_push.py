@@ -63,7 +63,7 @@ def parse_news_type_and_content(news):
     raw_title = news.get("title", "").strip()
     no_title_flags = ["[No Title]", "no title", "untitled", "- Post from "]
     is_forward = not raw_title or any(flag in raw_title for flag in no_title_flags)
-    forward_tag = "（懂王只发图或转发贴）" if is_forward else ""
+    forward_tag = "（懂王只发了图或只转发了别人的推文）" if is_forward else ""
 
     if is_forward:
         content = news.get("content", [{}])[0].get("value", "") if news.get("content") else ""
