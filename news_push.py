@@ -135,7 +135,7 @@ def make_email_content(all_news):
     arrow_color = "#FFCC00"
     
     # 关键修改：content_indent改为0，实现【懂王】与【时间】左对齐
-    content_indent = "0px"       
+    content_indent = "10px"       
     card_margin = "0 0 4px 0"     # 卡片间极小间距
     card_padding = "6px"          # 卡片内紧凑内边距
     line_margin = "0 0 4px 0"     # 行内极小间距
