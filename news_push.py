@@ -119,7 +119,7 @@ def check_push():
         print(f"ℹ️  无新资讯，本次跳过推送")
         return False, None
 
-# ✅ 核心修改：调小卡片间距和内部行间距
+# ✅ 核心修改：时间与序号靠近+水平居中对齐
 def make_email_content(all_news):
     if not all_news:
         return "<p style='font-size:16px; color:#FFFFFF;'>暂无可用的Trump Truth资讯</p>"
@@ -133,7 +133,7 @@ def make_email_content(all_news):
     link_color = "#1E90FF"   # 链接蓝色
     arrow_color = "#FFCC00"  # 👉图标黄色（匹配截图）
     align_indent = "22px"    # 【】竖线对齐的缩进值
-    serial_width = "35px"    # 序号固定宽度
+    serial_width = "25px"    # 调小序号宽度，让时间更靠近
 
     email_title_html = f"""
     <p style='margin: 0 0 12px 0; padding: 8px; background-color:#2D2D2D; border-left:4px solid {title_color};'>
@@ -147,10 +147,10 @@ def make_email_content(all_news):
         show_time = get_show_time(news)
         forward_tag, content_text = parse_news_type_and_content(news)
         
-        # 调小卡片间距（15px→6px）、内部行间距（12px→6px）
         news_items.append(f"""
         <div style='margin: 0 0 6px 0; padding: 8px; background-color:#2D2D2D; border-radius:4px;'>
-            <div style='display: flex; align-items: flex-start;'>
+            <!-- align-items改为center，确保序号和时间水平居中 -->
+            <div style='display: flex; align-items: center;'>
                 <span style='color:{serial_color}; font-size:15px; font-weight:bold; min-width: {serial_width};'>{i}.</span>
                 <div style='flex: 1;'>
                     <p style='margin: 0 0 6px 0; padding: 0; line-height:1.5;'>
