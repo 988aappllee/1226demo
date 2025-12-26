@@ -63,14 +63,14 @@ def parse_news_type_and_content(news):
     raw_title = news.get("title", "").strip()
     no_title_flags = ["[No Title]", "no title", "untitled", "- Post from "]
     is_forward = not raw_title or any(flag in raw_title for flag in no_title_flags)
-    forward_tag = "（懂王转发贴）" if is_forward else ""
+    forward_tag = "（懂王只发图或转发贴）" if is_forward else ""
 
     if is_forward:
         content = news.get("content", [{}])[0].get("value", "") if news.get("content") else ""
         clean_text = re.sub(r'<.*?>', '', content, flags=re.DOTALL)
         clean_text = re.sub(r'https?://\S+', '', clean_text).strip()
         clean_text = re.sub(r'^(\s*RT[:\s]*|\s*@\w+:)', '', clean_text, flags=re.IGNORECASE)
-        trump_text = clean_text.strip() if clean_text and len(clean_text) > 2 else "无发言"
+        trump_text = clean_text.strip() if clean_text and len(clean_text) > 2 else "无文字发言"
         content_text = f"【懂王】：{trump_text}"
     else:
         clean_title = re.sub(r'https?://\S+', '', raw_title).strip()
