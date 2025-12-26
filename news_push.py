@@ -14,7 +14,7 @@ SMTP_SERVER = "smtp.gmail.com"
 CUSTOM_NICKNAME = "📩路透快讯"
 
 # ---------------------- 基础配置（路透社Feed，不用改） ----------------------
-RSS_URL = "https://reutersnew.buzzing.cc/feed.xml"  # 路透社资讯源
+RSS_URL = "https://rss.app/feeds/_narglpvsdb9TNoId.xml"  # 路透社资讯源
 LAST_LINK_FILE = "last_link.txt"  # 防重复推送的历史链接文件
 REQUEST_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
