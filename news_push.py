@@ -23,53 +23,48 @@ REQUEST_HEADERS = {
     "Connection": "keep-alive"
 }
 
-# ✅ 核心修改：时间显示【北京时间 年-月-日 时:分】
+# ✅ 核心修改：直接提取pubDate精准时间并转北京时间
 def get_show_time(news):
-    # 先尝试从content提取原始时间字符串（备用）
-    content = news.get("content", [{}])[0].get("value", "") if news.get("content") else ""
-    time_patterns = [r'(\d{2}:\d{2})<\/time>', r'(\d{2}:\d{2}:\d{2})', r'(\d{1,2}:\d{2}\s*[AP]M)']
-    raw_time = None
-    for pattern in time_patterns:
-        match = re.search(pattern, content, re.IGNORECASE)
-        if match:
-            raw_time = match.group(1).strip()
-            break
-
-    # 优先从updated/published字段提取ISO时间并转北京时间（含年月日）
-    time_str = news.get("updated", news.get("published", ""))
-    if not time_str:
-        return "未知时间"
+    # 定义北京时间时区（UTC+8）
+    beijing_tz = timezone(timedelta(hours=8))
+    # 优先提取RSS源的pubDate字段（精准时间）
+    pub_date_str = news.get("pubdate", news.get("published", ""))
     
-    try:
-        # 解析ISO格式时间（如2025-12-26T12:59:00+00:00）
-        if 'T' in time_str:
-            dt = datetime.datetime.fromisoformat(time_str.replace('Z', '+00:00'))
-            beijing_tz = timezone(timedelta(hours=8))
-            dt_beijing = dt.astimezone(beijing_tz)
-            # 返回【年-月-日 时:分】格式
+    if pub_date_str:
+        try:
+            # 匹配RSS源pubDate的格式：Fri, 26 Dec 2025 12:59:51 +0000
+            dt_formats = [
+                "%a, %d %b %Y %H:%M:%S %z",
+                "%a, %d %b %Y %H:%M %z",
+                "%d %b %Y %H:%M:%S %z",
+                "%Y-%m-%d %H:%M:%S %z"
+            ]
+            for fmt in dt_formats:
+                try:
+                    # 解析UTC时间
+                    dt_utc = datetime.datetime.strptime(pub_date_str, fmt)
+                    # 转换为北京时间
+                    dt_beijing = dt_utc.astimezone(beijing_tz)
+                    # 返回【年-月-日 时:分】格式
+                    return dt_beijing.strftime("%Y-%m-%d %H:%M")
+                except:
+                    continue
+        except:
+            pass
+
+    # 备用：从updated字段提取（兼容其他格式）
+    updated_str = news.get("updated", "")
+    if updated_str:
+        try:
+            dt_utc = datetime.datetime.fromisoformat(updated_str.replace('Z', '+00:00'))
+            dt_beijing = dt_utc.astimezone(beijing_tz)
             return dt_beijing.strftime("%Y-%m-%d %H:%M")
-        # 处理普通日期时间格式
-        elif re.search(r'\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}', time_str):
-            dt = datetime.datetime.strptime(time_str, "%Y-%m-%d %H:%M")
-            dt_beijing = dt + timedelta(hours=8)
-            return dt_beijing.strftime("%Y-%m-%d %H:%M")
-        # 仅日期的情况
-        elif re.search(r'\d{4}-\d{2}-\d{2}', time_str):
-            dt = datetime.datetime.strptime(time_str.split('T')[0], "%Y-%m-%d")
-            return dt.strftime("%Y-%m-%d") + " 未知时分"
-        # 只有时分的情况（结合当前日期补全）
-        elif raw_time and re.search(r'\d{2}:\d{2}', raw_time):
-            current_bj = datetime.datetime.now(beijing_tz)
-            return current_bj.strftime("%Y-%m-%d") + f" {raw_time}"
-        else:
-            return "未知时间"
-    except:
-        # 兜底：用当前北京时间补全
-        current_bj = datetime.datetime.now(timezone(timedelta(hours=8)))
-        if raw_time and re.search(r'\d{2}:\d{2}', raw_time):
-            return current_bj.strftime("%Y-%m-%d") + f" {raw_time}"
-        else:
-            return current_bj.strftime("%Y-%m-%d %H:%M")
+        except:
+            pass
+
+    # 最终兜底（仅pubDate完全解析失败时用）
+    current_bj = datetime.datetime.now(beijing_tz)
+    return current_bj.strftime("%Y-%m-%d %H:%M")
 
 # ✅ 核心规则（无任何多余代码）
 def parse_news_type_and_content(news):
@@ -129,7 +124,7 @@ def check_push():
         print("🚨 新资讯检测到，准备推送！")
         return True, all_news
     else:
-        print("ℹ️  无新资讯，本次跳过推送")
+        print(f"ℹ️  无新资讯，本次跳过推送")
         return False, None
 
 # 邮件样式（匹配截图深色模式，不用改）
@@ -228,5 +223,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"💥 程序异常：{str(e)}")
         raise
-
 
