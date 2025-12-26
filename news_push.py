@@ -119,22 +119,25 @@ def check_push():
         print(f"ℹ️  无新资讯，本次跳过推送")
         return False, None
 
-# ✅ 核心修改：按序号→时间→转发贴、【懂王】单独换行排版
+# ✅ 核心修改：时间、懂王、查看原文统一缩进对齐
 def make_email_content(all_news):
     if not all_news:
         return "<p style='font-size:16px; color:#FFFFFF;'>暂无可用的Trump Truth资讯</p>"
     news_list = all_news[:300]
 
+    # 颜色配置不变，匹配截图
     title_color = "#C8102E"
-    time_color = "#1E90FF"  # 时间蓝色（匹配截图）
-    serial_color = "#FFFFFF" # 序号白色
-    forward_color = "#C8102E" # 【转发贴】红色
-    content_color = "#FFFFFF" # 【懂王】内容白色
-    link_color = "#1E90FF"   # 链接蓝色
+    time_color = "#1E90FF"
+    serial_color = "#FFFFFF"
+    forward_color = "#C8102E"
+    content_color = "#FFFFFF"
+    link_color = "#1E90FF"
+    # 统一缩进距离（可根据需要调整，单位px）
+    indent = "20px"
 
     email_title_html = f"""
-    <p style='margin: 0 0 20px 0; padding: 10px; background-color:#2D2D2D; border-left:4px solid {title_color};'>
-        <strong><span style='color:{title_color}; font-size:20px;'>♥️ Trump Truth 每日速递</span></strong>
+    <p style='margin: 0 0 12px 0; padding: 8px; background-color:#2D2D2D; border-left:4px solid {title_color};'>
+        <strong><span style='color:{title_color}; font-size:18px;'>♥️ Trump Truth 每日速递</span></strong>
     </p>
     """
 
@@ -144,22 +147,25 @@ def make_email_content(all_news):
         show_time = get_show_time(news)
         forward_tag, content_text = parse_news_type_and_content(news)
         
-        # 重构排版：序号 时间 转发贴 同一行，【懂王】单独换行，查看原文再换行
+        # 实现对齐：序号单独占位置，时间/懂王/查看原文统一左侧缩进
         news_items.append(f"""
-        <div style='margin: 0 0 15px 0; padding: 10px; background-color:#2D2D2D; border-radius:4px;'>
-            <p style='margin: 0 0 8px 0; padding: 0; line-height:1.6;'>
-                <span style='color:{serial_color}; font-size:15px; font-weight:bold;'>{i}.</span> 
-                <span style='color:{time_color}; font-weight: bold; font-size:15px; margin: 0 5px;'>【{show_time}】</span>
-                <span style='color:{forward_color}; font-weight: bold; font-size:15px;'>{forward_tag}</span>
-            </p>
-            <p style='margin: 0 0 8px 0; padding: 0; font-size:16px; color:{content_color};'>
-                {content_text}
-            </p>
-            <p style='margin: 0; padding: 0; line-height:1.4;'>
-                👉 <a href='{news_link}' target='_blank' style='color:{link_color}; text-decoration: none; font-size:14px; border-bottom:1px solid {link_color};'>
-                    查看原文 →
-                </a>
-            </p>
+        <div style='margin: 0 0 10px 0; padding: 8px; background-color:#2D2D2D; border-radius:4px;'>
+            <div style='display: flex; align-items: flex-start;'>
+                <span style='color:{serial_color}; font-size:14px; font-weight:bold; min-width: 20px;'>{i}.</span>
+                <div style='flex: 1;'>
+                    <p style='margin: 0 0 4px 0; line-height:1.5; color:{time_color}; font-size:14px;'>
+                        【{show_time}】<span style='color:{forward_color};'>{forward_tag}</span>
+                    </p>
+                    <p style='margin: 0 0 4px 0; font-size:15px; color:{content_color}; padding-left: {indent};'>
+                        {content_text}
+                    </p>
+                    <p style='margin: 0; font-size:13px; padding-left: {indent};'>
+                        👉 <a href='{news_link}' target='_blank' style='color:{link_color}; text-decoration: none; border-bottom:1px solid {link_color};'>
+                            查看原文 →
+                        </a>
+                    </p>
+                </div>
+            </div>
         </div>
         """)
     return email_title_html + "".join(news_items)
@@ -218,4 +224,5 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"💥 程序异常：{str(e)}")
         raise
+
 
