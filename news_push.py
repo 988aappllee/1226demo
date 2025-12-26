@@ -142,7 +142,7 @@ def make_email_content(all_news):
 
     email_title_html = f"""
     <p style='margin: 0 0 8px 0; padding: 6px; background-color:#2D2D2D; border-left:4px solid {title_color};'>
-        <strong><span style='color:{title_color}; font-size:18px;'>♥️ 「7*24速递」</span></strong>
+        <strong><span style='color:{title_color}; font-size:18px;'>♥️ 「7*24真实社交速递」</span></strong>
     </p>
     """
 
