@@ -119,7 +119,7 @@ def check_push():
         print(f"ℹ️  无新资讯，本次跳过推送")
         return False, None
 
-# ✅ 核心修改：像素级精准对齐（解决所有对齐问题）
+# ✅ 核心修改：序号与【时间】强制同一水平线+垂直居中
 def make_email_content(all_news):
     if not all_news:
         return "<p style='font-size:16px; color:#FFFFFF;'>暂无可用的Trump Truth资讯</p>"
@@ -134,8 +134,7 @@ def make_email_content(all_news):
     link_color = "#1E90FF"
     arrow_color = "#FFCC00"
     
-    # 精准对齐参数（反复测试的像素值，确保竖线/水平线完全重合）
-    serial_padding = "0 8px 0 0"  # 序号右侧仅留8px间距，靠近时间
+    # 精准对齐参数
     content_indent = "30px"       # 【懂王】与时间【的竖线精准对齐值
     card_margin = "0 0 4px 0"     # 卡片间极小间距
     card_padding = "6px"          # 卡片内紧凑内边距
@@ -153,31 +152,26 @@ def make_email_content(all_news):
         show_time = get_show_time(news)
         forward_tag, content_text = parse_news_type_and_content(news)
         
-        # 布局逻辑：
-        # 1. 序号用inline-block，无多余宽度占用
-        # 2. 时间与序号基线对齐，确保水平一致
-        # 3. 懂王/查看原文用统一padding-left，与时间【竖线重合
+        # 关键修改：用Flex布局让序号和时间在同一水平线且垂直居中
         news_items.append(f"""
         <div style='margin:{card_margin}; padding:{card_padding}; background-color:#2D2D2D; border-radius:4px;'>
-            <div style='display: inline-block; vertical-align: baseline;'>
-                <span style='color:{serial_color}; font-size:15px; font-weight:bold; padding:{serial_padding};'>{i}.</span>
+            <!-- Flex容器：序号+时间行 垂直居中，确保同一水平线 -->
+            <div style='display: flex; align-items: center; margin:{line_margin};'>
+                <span style='color:{serial_color}; font-size:15px; font-weight:bold; margin-right: 8px;'>{i}.</span>
+                <div style='flex: 1;'>
+                    <span style='color:{time_color}; font-weight:bold; font-size:15px;'>【{show_time}】</span>
+                    <span style='color:{forward_color}; font-weight:bold; margin:0 6px; font-size:15px;'>{forward_tag}</span>
+                </div>
             </div>
-            <div style='display: inline-block; vertical-align: baseline; width: calc(100% - 40px);'>
-                <!-- 时间行：与序号基线对齐 -->
-                <p style='margin:{line_margin}; padding:0; line-height:1.4; font-size:15px;'>
-                    <span style='color:{time_color}; font-weight:bold;'>【{show_time}】</span>
-                    <span style='color:{forward_color}; font-weight:bold; margin:0 6px;'>{forward_tag}</span>
-                </p>
-                <!-- 懂王行：精准缩进，与时间【竖线重合 -->
-                <p style='margin:{line_margin}; padding:0 0 0 {content_indent}; line-height:1.4; font-size:16px; color:{content_color};'>
-                    {content_text}
-                </p>
-                <!-- 查看原文行：同缩进，与懂王竖线对齐 -->
-                <p style='margin:0; padding:0 0 0 {content_indent}; line-height:1.4; font-size:14px;'>
-                    <span style='color:{arrow_color}; font-size:16px;'>👉</span>
-                    <a href='{news_link}' target='_blank' style='color:{link_color}; text-decoration:none;'>查看原文</a>
-                </p>
-            </div>
+            <!-- 懂王行：精准缩进，与时间【竖线重合 -->
+            <p style='margin:{line_margin}; padding:0 0 0 {content_indent}; line-height:1.4; font-size:16px; color:{content_color}; margin-top:0;'>
+                {content_text}
+            </p>
+            <!-- 查看原文行：同缩进，与懂王竖线对齐 -->
+            <p style='margin:0; padding:0 0 0 {content_indent}; line-height:1.4; font-size:14px;'>
+                <span style='color:{arrow_color}; font-size:16px;'>👉</span>
+                <a href='{news_link}' target='_blank' style='color:{link_color}; text-decoration:none;'>查看原文</a>
+            </p>
         </div>
         """)
     return email_title_html + "".join(news_items)
