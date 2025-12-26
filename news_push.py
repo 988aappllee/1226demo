@@ -11,7 +11,7 @@ GMAIL_EMAIL = os.getenv("GMAIL_EMAIL")
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
 RECEIVER_EMAILS = os.getenv("RECEIVER_EMAILS")
 SMTP_SERVER = "smtp.gmail.com"
-CUSTOM_NICKNAME = "📩路透快讯"
+CUSTOM_NICKNAME = "📩懂王速递"
 
 # ---------------------- 基础配置（路透社Feed，不用改） ----------------------
 RSS_URL = "https://www.trumpstruth.org/feed"  # 路透社资讯源
