@@ -23,16 +23,13 @@ REQUEST_HEADERS = {
     "Connection": "keep-alive"
 }
 
-# ✅ 核心修改：直接提取pubDate精准时间并转北京时间
+# ✅ 精准提取pubDate并转北京时间
 def get_show_time(news):
-    # 定义北京时间时区（UTC+8）
     beijing_tz = timezone(timedelta(hours=8))
-    # 优先提取RSS源的pubDate字段（精准时间）
     pub_date_str = news.get("pubdate", news.get("published", ""))
     
     if pub_date_str:
         try:
-            # 匹配RSS源pubDate的格式：Fri, 26 Dec 2025 12:59:51 +0000
             dt_formats = [
                 "%a, %d %b %Y %H:%M:%S %z",
                 "%a, %d %b %Y %H:%M %z",
@@ -41,18 +38,14 @@ def get_show_time(news):
             ]
             for fmt in dt_formats:
                 try:
-                    # 解析UTC时间
                     dt_utc = datetime.datetime.strptime(pub_date_str, fmt)
-                    # 转换为北京时间
                     dt_beijing = dt_utc.astimezone(beijing_tz)
-                    # 返回【年-月-日 时:分】格式
                     return dt_beijing.strftime("%Y-%m-%d %H:%M")
                 except:
                     continue
         except:
             pass
 
-    # 备用：从updated字段提取（兼容其他格式）
     updated_str = news.get("updated", "")
     if updated_str:
         try:
@@ -62,7 +55,6 @@ def get_show_time(news):
         except:
             pass
 
-    # 最终兜底（仅pubDate完全解析失败时用）
     current_bj = datetime.datetime.now(beijing_tz)
     return current_bj.strftime("%Y-%m-%d %H:%M")
 
@@ -79,10 +71,10 @@ def parse_news_type_and_content(news):
         clean_text = re.sub(r'https?://\S+', '', clean_text).strip()
         clean_text = re.sub(r'^(\s*RT[:\s]*|\s*@\w+:)', '', clean_text, flags=re.IGNORECASE)
         trump_text = clean_text.strip() if clean_text and len(clean_text) > 2 else "无文字"
-        content_text = f"\n【懂王】：{trump_text}"
+        content_text = f"【懂王】：{trump_text}"
     else:
         clean_title = re.sub(r'https?://\S+', '', raw_title).strip()
-        content_text = f"\n【懂王】：{clean_title}"
+        content_text = f"【懂王】：{clean_title}"
 
     return forward_tag, content_text
 
@@ -127,7 +119,7 @@ def check_push():
         print(f"ℹ️  无新资讯，本次跳过推送")
         return False, None
 
-# 邮件样式（匹配截图深色模式，不用改）
+# ✅ 核心修改：按序号→时间→转发贴、【懂王】单独换行排版
 def make_email_content(all_news):
     if not all_news:
         return "<p style='font-size:16px; color:#FFFFFF;'>暂无可用的Trump Truth资讯</p>"
@@ -136,9 +128,9 @@ def make_email_content(all_news):
     title_color = "#C8102E"
     time_color = "#1E90FF"  # 时间蓝色（匹配截图）
     serial_color = "#FFFFFF" # 序号白色
-    news_title_color = "#FFFFFF" # 内容白色
-    link_color = "#1E90FF"   # 链接蓝色
     forward_color = "#C8102E" # 【转发贴】红色
+    content_color = "#FFFFFF" # 【懂王】内容白色
+    link_color = "#1E90FF"   # 链接蓝色
 
     email_title_html = f"""
     <p style='margin: 0 0 20px 0; padding: 10px; background-color:#2D2D2D; border-left:4px solid {title_color};'>
@@ -152,13 +144,16 @@ def make_email_content(all_news):
         show_time = get_show_time(news)
         forward_tag, content_text = parse_news_type_and_content(news)
         
+        # 重构排版：序号 时间 转发贴 同一行，【懂王】单独换行，查看原文再换行
         news_items.append(f"""
         <div style='margin: 0 0 15px 0; padding: 10px; background-color:#2D2D2D; border-radius:4px;'>
-            <p style='margin: 0 0 8px 0; padding: 0; line-height:1.9; white-space: pre-line;'>
+            <p style='margin: 0 0 8px 0; padding: 0; line-height:1.6;'>
                 <span style='color:{serial_color}; font-size:15px; font-weight:bold;'>{i}.</span> 
-                <span style='color:{time_color}; font-weight: bold; font-size:15px;'>【{show_time}】</span>
+                <span style='color:{time_color}; font-weight: bold; font-size:15px; margin: 0 5px;'>【{show_time}】</span>
                 <span style='color:{forward_color}; font-weight: bold; font-size:15px;'>{forward_tag}</span>
-                <span style='color:{news_title_color}; font-size:16px;'>{content_text}</span>
+            </p>
+            <p style='margin: 0 0 8px 0; padding: 0; font-size:16px; color:{content_color};'>
+                {content_text}
             </p>
             <p style='margin: 0; padding: 0; line-height:1.4;'>
                 👉 <a href='{news_link}' target='_blank' style='color:{link_color}; text-decoration: none; font-size:14px; border-bottom:1px solid {link_color};'>
