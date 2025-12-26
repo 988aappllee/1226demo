@@ -119,7 +119,7 @@ def check_push():
         print(f"ℹ️  无新资讯，本次跳过推送")
         return False, None
 
-# ✅ 核心修改：序号与【时间】强制同一水平线+垂直居中
+# ✅ 核心修改：【懂王】与【时间】左对齐（仅改缩进为0）
 def make_email_content(all_news):
     if not all_news:
         return "<p style='font-size:16px; color:#FFFFFF;'>暂无可用的Trump Truth资讯</p>"
@@ -134,8 +134,8 @@ def make_email_content(all_news):
     link_color = "#1E90FF"
     arrow_color = "#FFCC00"
     
-    # 精准对齐参数
-    content_indent = "30px"       # 【懂王】与时间【的竖线精准对齐值
+    # 关键修改：content_indent改为0，实现【懂王】与【时间】左对齐
+    content_indent = "0px"       
     card_margin = "0 0 4px 0"     # 卡片间极小间距
     card_padding = "6px"          # 卡片内紧凑内边距
     line_margin = "0 0 4px 0"     # 行内极小间距
@@ -152,10 +152,9 @@ def make_email_content(all_news):
         show_time = get_show_time(news)
         forward_tag, content_text = parse_news_type_and_content(news)
         
-        # 关键修改：用Flex布局让序号和时间在同一水平线且垂直居中
+        # Flex布局让序号和时间在同一水平线且垂直居中
         news_items.append(f"""
         <div style='margin:{card_margin}; padding:{card_padding}; background-color:#2D2D2D; border-radius:4px;'>
-            <!-- Flex容器：序号+时间行 垂直居中，确保同一水平线 -->
             <div style='display: flex; align-items: center; margin:{line_margin};'>
                 <span style='color:{serial_color}; font-size:15px; font-weight:bold; margin-right: 8px;'>{i}.</span>
                 <div style='flex: 1;'>
@@ -163,11 +162,11 @@ def make_email_content(all_news):
                     <span style='color:{forward_color}; font-weight:bold; margin:0 6px; font-size:15px;'>{forward_tag}</span>
                 </div>
             </div>
-            <!-- 懂王行：精准缩进，与时间【竖线重合 -->
+            <!-- 【懂王】行：缩进为0，与【时间】左对齐 -->
             <p style='margin:{line_margin}; padding:0 0 0 {content_indent}; line-height:1.4; font-size:16px; color:{content_color}; margin-top:0;'>
                 {content_text}
             </p>
-            <!-- 查看原文行：同缩进，与懂王竖线对齐 -->
+            <!-- 查看原文行：同缩进，与【懂王】左对齐 -->
             <p style='margin:0; padding:0 0 0 {content_indent}; line-height:1.4; font-size:14px;'>
                 <span style='color:{arrow_color}; font-size:16px;'>👉</span>
                 <a href='{news_link}' target='_blank' style='color:{link_color}; text-decoration:none;'>查看原文</a>
