@@ -58,7 +58,7 @@ def get_show_time(news):
     current_bj = datetime.datetime.now(beijing_tz)
     return current_bj.strftime("%Y-%m-%d %H:%M")
 
-# ✅ 核心规则（无任何多余代码）
+# ✅ 核心规则（拆分【懂王】和内容，方便样式控制）
 def parse_news_type_and_content(news):
     raw_title = news.get("title", "").strip()
     no_title_flags = ["[No Title]", "no title", "untitled", "- Post from "]
@@ -71,14 +71,16 @@ def parse_news_type_and_content(news):
         clean_text = re.sub(r'https?://\S+', '', clean_text).strip()
         clean_text = re.sub(r'^(\s*RT[:\s]*|\s*@\w+:)', '', clean_text, flags=re.IGNORECASE)
         trump_text = clean_text.strip() if clean_text and len(clean_text) > 2 else "无发言"
-        content_text = f"【懂王】：{trump_text}"
     else:
         clean_title = re.sub(r'https?://\S+', '', raw_title).strip()
-        content_text = f"【懂王】：{clean_title}"
+        trump_text = clean_title
 
-    return forward_tag, content_text
+    # 拆分【懂王】标签和内容，便于前端样式对齐
+    content_label = "【懂王】："
+    content_text = trump_text
+    return forward_tag, content_label, content_text
 
-# 抓取资讯（不用改，修正了拼写错误REQUEST_HEADERS）
+# 抓取资讯（不用改）
 def fetch_news():
     try:
         response = requests.get(RSS_URL, headers=REQUEST_HEADERS, timeout=15)
@@ -119,13 +121,13 @@ def check_push():
         print(f"ℹ️  无新资讯，本次跳过推送")
         return False, None
 
-# ✅ 核心修改：只改【时间】和（懂王转发贴）间距为1px，其他全部不变
+# ✅ 核心修改：【懂王】后英文换行垂直对齐，无出头
 def make_email_content(all_news):
     if not all_news:
         return "<p style='font-size:16px; color:#FFFFFF;'>暂无可用的Trump Truth资讯</p>"
     news_list = all_news[:300]
 
-    # 颜色配置（匹配截图）
+    # 颜色配置
     title_color = "#C8102E"
     time_color = "#1E90FF"
     serial_color = "#FFFFFF"
@@ -134,11 +136,13 @@ def make_email_content(all_news):
     link_color = "#1E90FF"
     arrow_color = "#FFCC00"
     
-    # 你的原参数 全部不变
+    # 原参数不变
     content_indent = "20px"
     card_margin = "0 0 4px 0"
     card_padding = "6px"
     line_margin = "0 0 4px 0"
+    # 新增：【懂王】标签的固定宽度，确保后续文本换行对齐
+    label_width = "80px"
 
     email_title_html = f"""
     <p style='margin: 0 0 8px 0; padding: 6px; background-color:#2D2D2D; border-left:4px solid {title_color};'>
@@ -150,7 +154,7 @@ def make_email_content(all_news):
     for i, news in enumerate(news_list, 1):
         news_link = news["link"]
         show_time = get_show_time(news)
-        forward_tag, content_text = parse_news_type_and_content(news)
+        forward_tag, content_label, content_text = parse_news_type_and_content(news)
         
         news_items.append(f"""
         <div style='margin:{card_margin}; padding:{card_padding}; background-color:#2D2D2D; border-radius:4px;'>
@@ -158,12 +162,13 @@ def make_email_content(all_news):
                 <span style='color:{serial_color}; font-size:15px; font-weight:bold; margin-right: 8px;'>{i}.</span>
                 <div style='flex: 1;'>
                     <span style='color:{time_color}; font-weight:bold; font-size:15px;'>【{show_time}】</span>
-                    <!-- 仅改这行：间距从 0 6px 改为 0 1px，实现贴近效果 -->
                     <span style='color:{forward_color}; font-weight:bold; margin:0 0px; font-size:15px;'>{forward_tag}</span>
                 </div>
             </div>
+            <!-- 核心修改：【懂王】标签固定宽度，文本换行后缩进对齐 -->
             <p style='margin:{line_margin}; padding:0 0 0 {content_indent}; line-height:1.4; font-size:16px; color:{content_color}; margin-top:0;'>
-                {content_text}
+                <span style='display: inline-block; width: {label_width}; vertical-align: top;'>{content_label}</span>
+                <span style='display: inline-block; width: calc(100% - {label_width});'>{content_text}</span>
             </p>
             <p style='margin:0; padding:0 0 0 {content_indent}; line-height:1.4; font-size:14px;'>
                 <span style='color:{arrow_color}; font-size:16px;'>👉</span>
