@@ -57,7 +57,7 @@ def get_show_time(news):
     except:
         return "未知时间"
 
-# 新增：提取有效标题（解决[No Title]问题）
+# 新增：提取有效标题（过滤URL+清理冗余前缀，解决[No Title]和链接显示问题）
 def get_valid_title(news):
     # 1. 获取原始标题并清洗
     raw_title = news.get("title", "").strip()
@@ -66,28 +66,30 @@ def get_valid_title(news):
     is_empty_title = not raw_title or any(flag in raw_title for flag in no_title_flags)
     
     if not is_empty_title:
-        return raw_title
+        # 过滤原始标题中的URL
+        clean_title = re.sub(r'https?://\S+', '', raw_title).strip()
+        return clean_title if clean_title else raw_title
     
-    # 2. 从content正文提取标题（适配转发内容）
+    # 2. 从content正文提取内容（适配转发内容，先清理HTML标签和URL）
     content = news.get("content", [{}])[0].get("value", "") if news.get("content") else ""
-    # 匹配正文里的标题/核心内容（简单正则，可根据源站调整）
-    content_title_patterns = [
-        r'<h1.*?>(.*?)<\/h1>',  # 匹配h1标题
-        r'<h2.*?>(.*?)<\/h2>',  # 匹配h2标题
-        r'<strong.*?>(.*?)<\/strong>',  # 匹配加粗核心内容
-        r'^[\w\s\!\?\:]+',  # 匹配开头的纯文本内容
-    ]
-    for pattern in content_title_patterns:
-        match = re.search(pattern, content, re.IGNORECASE | re.DOTALL)
-        if match:
-            extracted = match.group(1).strip()
-            if extracted and len(extracted) > 5:  # 过滤过短内容
-                return f"【转发】{extracted[:80]}"  # 截断过长内容
+    # 第一步：移除所有HTML标签
+    content_no_html = re.sub(r'<.*?>', '', content, flags=re.DOTALL)
+    # 第二步：移除所有URL链接
+    content_no_url = re.sub(r'https?://\S+', '', content_no_html).strip()
+    # 第三步：清理冗余前缀（RT:/RT @/转推: 等）
+    content_clean = re.sub(r'^(\s*RT[:\s]*|转推[:\s]*|分享[:\s]*)', '', content_no_url, flags=re.IGNORECASE)
     
-    # 3. 从summary/description提取
+    # 提取有效文本（非空且长度足够）
+    if content_clean and len(content_clean) > 5:
+        return f"【转发】{content_clean[:80]}"  # 截断过长内容
+    
+    # 3. 从summary/description提取（同样清理URL和前缀）
     summary = news.get("summary", "").strip() or news.get("description", "").strip()
-    if summary and len(summary) > 5:
-        return f"【转发】{summary[:80]}"
+    summary_no_html = re.sub(r'<.*?>', '', summary, flags=re.DOTALL)
+    summary_no_url = re.sub(r'https?://\S+', '', summary_no_html).strip()
+    summary_clean = re.sub(r'^(\s*RT[:\s]*|转推[:\s]*|分享[:\s]*)', '', summary_no_url, flags=re.IGNORECASE)
+    if summary_clean and len(summary_clean) > 5:
+        return f"【转发】{summary_clean[:80]}"
     
     # 4. 最终自定义占位符
     return "【转发内容】"
