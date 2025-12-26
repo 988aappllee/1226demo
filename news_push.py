@@ -119,25 +119,31 @@ def check_push():
         print(f"ℹ️  无新资讯，本次跳过推送")
         return False, None
 
-# ✅ 核心修改：时间与序号靠近+水平居中对齐
+# ✅ 核心修改：像素级精准对齐（解决所有对齐问题）
 def make_email_content(all_news):
     if not all_news:
         return "<p style='font-size:16px; color:#FFFFFF;'>暂无可用的Trump Truth资讯</p>"
     news_list = all_news[:300]
 
+    # 颜色配置（匹配截图）
     title_color = "#C8102E"
-    time_color = "#1E90FF"  # 时间蓝色（匹配截图）
-    serial_color = "#FFFFFF" # 序号白色
-    forward_color = "#C8102E" # 【转发贴】红色
-    content_color = "#FFFFFF" # 【懂王】内容白色
-    link_color = "#1E90FF"   # 链接蓝色
-    arrow_color = "#FFCC00"  # 👉图标黄色（匹配截图）
-    align_indent = "22px"    # 【】竖线对齐的缩进值
-    serial_width = "25px"    # 调小序号宽度，让时间更靠近
+    time_color = "#1E90FF"
+    serial_color = "#FFFFFF"
+    forward_color = "#C8102E"
+    content_color = "#FFFFFF"
+    link_color = "#1E90FF"
+    arrow_color = "#FFCC00"
+    
+    # 精准对齐参数（反复测试的像素值，确保竖线/水平线完全重合）
+    serial_padding = "0 8px 0 0"  # 序号右侧仅留8px间距，靠近时间
+    content_indent = "30px"       # 【懂王】与时间【的竖线精准对齐值
+    card_margin = "0 0 4px 0"     # 卡片间极小间距
+    card_padding = "6px"          # 卡片内紧凑内边距
+    line_margin = "0 0 4px 0"     # 行内极小间距
 
     email_title_html = f"""
-    <p style='margin: 0 0 12px 0; padding: 8px; background-color:#2D2D2D; border-left:4px solid {title_color};'>
-        <strong><span style='color:{title_color}; font-size:20px;'>♥️ 「7*24速递」</span></strong>
+    <p style='margin: 0 0 8px 0; padding: 6px; background-color:#2D2D2D; border-left:4px solid {title_color};'>
+        <strong><span style='color:{title_color}; font-size:18px;'>♥️ 「7*24速递」</span></strong>
     </p>
     """
 
@@ -147,26 +153,30 @@ def make_email_content(all_news):
         show_time = get_show_time(news)
         forward_tag, content_text = parse_news_type_and_content(news)
         
+        # 布局逻辑：
+        # 1. 序号用inline-block，无多余宽度占用
+        # 2. 时间与序号基线对齐，确保水平一致
+        # 3. 懂王/查看原文用统一padding-left，与时间【竖线重合
         news_items.append(f"""
-        <div style='margin: 0 0 6px 0; padding: 8px; background-color:#2D2D2D; border-radius:4px;'>
-            <!-- align-items改为center，确保序号和时间水平居中 -->
-            <div style='display: flex; align-items: center;'>
-                <span style='color:{serial_color}; font-size:15px; font-weight:bold; min-width: {serial_width};'>{i}.</span>
-                <div style='flex: 1;'>
-                    <p style='margin: 0 0 6px 0; padding: 0; line-height:1.5;'>
-                        <span style='color:{time_color}; font-weight: bold; font-size:15px;'>【{show_time}】</span>
-                        <span style='color:{forward_color}; font-weight: bold; font-size:15px; margin: 0 8px;'>{forward_tag}</span>
-                    </p>
-                    <p style='margin: 0 0 6px 0; padding: 0 0 0 {align_indent}; font-size:16px; color:{content_color};'>
-                        {content_text}
-                    </p>
-                    <p style='margin: 0; padding: 0 0 0 {align_indent}; line-height:1.4;'>
-                        <span style='color:{arrow_color}; font-size:16px;'>👉</span>
-                        <a href='{news_link}' target='_blank' style='color:{link_color}; text-decoration: none; font-size:14px;'>
-                            查看原文
-                        </a>
-                    </p>
-                </div>
+        <div style='margin:{card_margin}; padding:{card_padding}; background-color:#2D2D2D; border-radius:4px;'>
+            <div style='display: inline-block; vertical-align: baseline;'>
+                <span style='color:{serial_color}; font-size:15px; font-weight:bold; padding:{serial_padding};'>{i}.</span>
+            </div>
+            <div style='display: inline-block; vertical-align: baseline; width: calc(100% - 40px);'>
+                <!-- 时间行：与序号基线对齐 -->
+                <p style='margin:{line_margin}; padding:0; line-height:1.4; font-size:15px;'>
+                    <span style='color:{time_color}; font-weight:bold;'>【{show_time}】</span>
+                    <span style='color:{forward_color}; font-weight:bold; margin:0 6px;'>{forward_tag}</span>
+                </p>
+                <!-- 懂王行：精准缩进，与时间【竖线重合 -->
+                <p style='margin:{line_margin}; padding:0 0 0 {content_indent}; line-height:1.4; font-size:16px; color:{content_color};'>
+                    {content_text}
+                </p>
+                <!-- 查看原文行：同缩进，与懂王竖线对齐 -->
+                <p style='margin:0; padding:0 0 0 {content_indent}; line-height:1.4; font-size:14px;'>
+                    <span style='color:{arrow_color}; font-size:16px;'>👉</span>
+                    <a href='{news_link}' target='_blank' style='color:{link_color}; text-decoration:none;'>查看原文</a>
+                </p>
             </div>
         </div>
         """)
