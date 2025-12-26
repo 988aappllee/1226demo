@@ -159,7 +159,7 @@ def make_email_content(all_news):
                 <div style='flex: 1;'>
                     <span style='color:{time_color}; font-weight:bold; font-size:15px;'>【{show_time}】</span>
                     <!-- 仅改这行：间距从 0 6px 改为 0 1px，实现贴近效果 -->
-                    <span style='color:{forward_color}; font-weight:bold; margin:0 1px; font-size:15px;'>{forward_tag}</span>
+                    <span style='color:{forward_color}; font-weight:bold; margin:0 0px; font-size:15px;'>{forward_tag}</span>
                 </div>
             </div>
             <p style='margin:{line_margin}; padding:0 0 0 {content_indent}; line-height:1.4; font-size:16px; color:{content_color}; margin-top:0;'>
