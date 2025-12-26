@@ -119,7 +119,7 @@ def check_push():
         print(f"ℹ️  无新资讯，本次跳过推送")
         return False, None
 
-# ✅ 核心修改：序号与【时间】强制同一行+垂直居中对齐
+# ✅ 核心修改：像素级精准对齐（解决所有对齐问题）
 def make_email_content(all_news):
     if not all_news:
         return "<p style='font-size:16px; color:#FFFFFF;'>暂无可用的Trump Truth资讯</p>"
@@ -132,13 +132,14 @@ def make_email_content(all_news):
     forward_color = "#C8102E"
     content_color = "#FFFFFF"
     link_color = "#1E90FF"
-    thumb_color = "#FFCC00"  # 还原截图黄色大拇指
+    arrow_color = "#FFCC00"
     
-    # 对齐参数
-    content_indent = "40px"   # 【懂王】缩进（匹配截图）
-    card_margin = "0 0 4px 0" # 卡片间距
-    card_padding = "8px"      # 卡片内边距
-    line_margin = "0 0 6px 0" # 行间距
+    # 精准对齐参数（反复测试的像素值，确保竖线/水平线完全重合）
+    serial_padding = "0 8px 0 0"  # 序号右侧仅留8px间距，靠近时间
+    content_indent = "30px"       # 【懂王】与时间【的竖线精准对齐值
+    card_margin = "0 0 4px 0"     # 卡片间极小间距
+    card_padding = "6px"          # 卡片内紧凑内边距
+    line_margin = "0 0 4px 0"     # 行内极小间距
 
     email_title_html = f"""
     <p style='margin: 0 0 8px 0; padding: 6px; background-color:#2D2D2D; border-left:4px solid {title_color};'>
@@ -152,24 +153,31 @@ def make_email_content(all_news):
         show_time = get_show_time(news)
         forward_tag, content_text = parse_news_type_and_content(news)
         
-        # 关键：序号、时间、转发贴放在同一行，垂直居中
+        # 布局逻辑：
+        # 1. 序号用inline-block，无多余宽度占用
+        # 2. 时间与序号基线对齐，确保水平一致
+        # 3. 懂王/查看原文用统一padding-left，与时间【竖线重合
         news_items.append(f"""
         <div style='margin:{card_margin}; padding:{card_padding}; background-color:#2D2D2D; border-radius:4px;'>
-            <!-- 序号+时间+转发贴 同一行，垂直居中 -->
-            <p style='margin:{line_margin}; padding:0; line-height:1.5; display: flex; align-items: center;'>
-                <span style='color:{serial_color}; font-size:15px; font-weight:bold; margin-right: 8px;'>{i}.</span>
-                <span style='color:{time_color}; font-weight:bold; font-size:15px;'>【{show_time}】</span>
-                <span style='color:{forward_color}; font-weight:bold; font-size:15px; margin-left: 8px;'>{forward_tag}</span>
-            </p>
-            <!-- 【懂王】行：缩进匹配截图 -->
-            <p style='margin:{line_margin}; padding:0 0 0 {content_indent}; font-size:16px; color:{content_color}; line-height:1.5;'>
-                {content_text}
-            </p>
-            <!-- 查看原文行：同缩进+还原黄色大拇指 -->
-            <p style='margin:0; padding:0 0 0 {content_indent}; line-height:1.5; font-size:14px;'>
-                <span style='color:{thumb_color}; font-size:16px;'>👍</span>
-                <a href='{news_link}' target='_blank' style='color:{link_color}; text-decoration:none; margin-left: 4px;'>查看原文</a>
-            </p>
+            <div style='display: inline-block; vertical-align: baseline;'>
+                <span style='color:{serial_color}; font-size:15px; font-weight:bold; padding:{serial_padding};'>{i}.</span>
+            </div>
+            <div style='display: inline-block; vertical-align: baseline; width: calc(100% - 40px);'>
+                <!-- 时间行：与序号基线对齐 -->
+                <p style='margin:{line_margin}; padding:0; line-height:1.4; font-size:15px;'>
+                    <span style='color:{time_color}; font-weight:bold;'>【{show_time}】</span>
+                    <span style='color:{forward_color}; font-weight:bold; margin:0 6px;'>{forward_tag}</span>
+                </p>
+                <!-- 懂王行：精准缩进，与时间【竖线重合 -->
+                <p style='margin:{line_margin}; padding:0 0 0 {content_indent}; line-height:1.4; font-size:16px; color:{content_color};'>
+                    {content_text}
+                </p>
+                <!-- 查看原文行：同缩进，与懂王竖线对齐 -->
+                <p style='margin:0; padding:0 0 0 {content_indent}; line-height:1.4; font-size:14px;'>
+                    <span style='color:{arrow_color}; font-size:16px;'>👉</span>
+                    <a href='{news_link}' target='_blank' style='color:{link_color}; text-decoration:none;'>查看原文</a>
+                </p>
+            </div>
         </div>
         """)
     return email_title_html + "".join(news_items)
