@@ -51,39 +51,29 @@ def get_show_time(news):
     except:
         return "未知时间"
 
-# 核心：识别转发源类型【图片/链接】
-def get_source_type(news):
-    content = news.get("content", [{}])[0].get("value", "") if news.get("content") else ""
-    summary = news.get("summary", "") or news.get("description", "")
-    full_text = content + summary
-
-    if re.search(r'<img\s+', full_text, re.IGNORECASE):
-        return "图片"
-    elif re.search(r'https?://\S+', full_text):
-        return "链接"
-    else:
-        return "链接"
-
-# ✅ 核心修改【全部内容统一开头【懂王】：】 完全按你的要求排版
-def get_news_content(news):
+# ✅ 核心精简规则（无任何多余代码，完美匹配你的要求）
+# 1. 转发贴 → 时间后加【转发贴】 + 换行【懂王】：无文字/说话内容
+# 2. 非转发贴 → 时间后无标注 + 换行【懂王】：原文标题
+# 3. 彻底删除【转发源为】所有相关功能，无残留
+def parse_news_type_and_content(news):
     raw_title = news.get("title", "").strip()
     no_title_flags = ["[No Title]", "no title", "untitled", "- Post from "]
-    is_forward_post = not raw_title or any(flag in raw_title for flag in no_title_flags)
+    is_forward = not raw_title or any(flag in raw_title for flag in no_title_flags)
+    forward_tag = "【转发贴】" if is_forward else ""
 
-    # ✅ 情况1：【转发贴】- 特朗普没说话
-    if is_forward_post:
+    # 提取懂王的文字内容（清洗所有冗余内容，只留纯文本）
+    if is_forward:
         content = news.get("content", [{}])[0].get("value", "") if news.get("content") else ""
         clean_text = re.sub(r'<.*?>', '', content, flags=re.DOTALL)
         clean_text = re.sub(r'https?://\S+', '', clean_text).strip()
         clean_text = re.sub(r'^(\s*RT[:\s]*|\s*@\w+:)', '', clean_text, flags=re.IGNORECASE)
-        trump_words = clean_text.strip() if clean_text and len(clean_text) > 2 else "无文字"
-        source_type = get_source_type(news)
-        return f"【懂王】：{trump_words}\n【转发源为】：{source_type}"
-
-    # ✅ 情况2：【非转发贴】- 统一显示【懂王】：+原文标题（你的最新要求）
+        trump_text = clean_text.strip() if clean_text and len(clean_text) > 2 else "无文字"
+        content_text = f"\n【懂王】：{trump_text}"
     else:
         clean_title = re.sub(r'https?://\S+', '', raw_title).strip()
-        return f"【懂王】：{clean_title}"
+        content_text = f"\n【懂王】：{clean_title}"
+
+    return forward_tag, content_text
 
 # 抓取资讯（不用改）
 def fetch_news():
@@ -126,7 +116,7 @@ def check_push():
         print("ℹ️  无新资讯，本次跳过推送")
         return False, None
 
-# 邮件样式+内容拼接（完美适配换行，不用改）
+# 邮件样式+完美适配换行排版（【转发贴】标红醒目，不用改）
 def make_email_content(all_news):
     if not all_news:
         return "<p style='font-size:16px; color:#333;'>暂无可用的Trump Truth资讯</p>"
@@ -137,6 +127,7 @@ def make_email_content(all_news):
     serial_color = "#003366"
     news_title_color = "#1A1A1A"
     link_color = "#0066CC"
+    forward_color = "#E63946" # 【转发贴】红色醒目
 
     email_title_html = f"""
     <p style='margin: 0 0 20px 0; padding: 10px; background-color:#F5F5F5; border-left:4px solid {title_color};'>
@@ -147,14 +138,16 @@ def make_email_content(all_news):
     news_items = []
     for i, news in enumerate(news_list, 1):
         news_link = news["link"]
-        news_title = get_news_content(news)
         show_time = get_show_time(news)
+        forward_tag, content_text = parse_news_type_and_content(news)
+        
         news_items.append(f"""
         <div style='margin: 0 0 15px 0; padding: 10px; background-color:#FAFAFA; border-radius:4px;'>
-            <p style='margin: 0 0 8px 0; padding: 0; line-height:1.8; white-space: pre-line;'>
+            <p style='margin: 0 0 8px 0; padding: 0; line-height:1.9; white-space: pre-line;'>
                 <span style='color:{serial_color}; font-size:15px; font-weight:bold;'>{i}.</span> 
-                <span style='color:{time_color}; font-weight: bold; font-size:15px; margin:0 8px;'>【{show_time}】</span>
-                <span style='color:{news_title_color}; font-size:16px;'>{news_title}</span>
+                <span style='color:{time_color}; font-weight: bold; font-size:15px;'>【{show_time}】</span>
+                <span style='color:{forward_color}; font-weight: bold; font-size:15px;'>{forward_tag}</span>
+                <span style='color:{news_title_color}; font-size:16px;'>{content_text}</span>
             </p>
             <p style='margin: 0; padding: 0; line-height:1.4;'>
                 👉 <a href='{news_link}' target='_blank' style='color:{link_color}; text-decoration: none; font-size:14px; border-bottom:1px solid {link_color};'>
