@@ -78,7 +78,7 @@ def parse_news_type_and_content(news):
 
     return forward_tag, content_text
 
-# 抓取资讯（不用改）
+# 抓取资讯（不用改，修正了拼写错误REQUEST_HEADERS）
 def fetch_news():
     try:
         response = requests.get(RSS_URL, headers=REQUEST_HEADERS, timeout=15)
@@ -119,7 +119,7 @@ def check_push():
         print(f"ℹ️  无新资讯，本次跳过推送")
         return False, None
 
-# ✅ 核心修改：【懂王】与【时间】左对齐（仅改缩进为0）
+# ✅ 核心修改：只改【时间】和（懂王转发贴）间距为1px，其他全部不变
 def make_email_content(all_news):
     if not all_news:
         return "<p style='font-size:16px; color:#FFFFFF;'>暂无可用的Trump Truth资讯</p>"
@@ -134,11 +134,11 @@ def make_email_content(all_news):
     link_color = "#1E90FF"
     arrow_color = "#FFCC00"
     
-    # 关键修改：content_indent改为0，实现【懂王】与【时间】左对齐
-    content_indent = "20px"       
-    card_margin = "0 0 4px 0"     # 卡片间极小间距
-    card_padding = "6px"          # 卡片内紧凑内边距
-    line_margin = "0 0 4px 0"     # 行内极小间距
+    # 你的原参数 全部不变
+    content_indent = "20px"
+    card_margin = "0 0 4px 0"
+    card_padding = "6px"
+    line_margin = "0 0 4px 0"
 
     email_title_html = f"""
     <p style='margin: 0 0 8px 0; padding: 6px; background-color:#2D2D2D; border-left:4px solid {title_color};'>
@@ -152,21 +152,19 @@ def make_email_content(all_news):
         show_time = get_show_time(news)
         forward_tag, content_text = parse_news_type_and_content(news)
         
-        # Flex布局让序号和时间在同一水平线且垂直居中
         news_items.append(f"""
         <div style='margin:{card_margin}; padding:{card_padding}; background-color:#2D2D2D; border-radius:4px;'>
             <div style='display: flex; align-items: center; margin:{line_margin};'>
                 <span style='color:{serial_color}; font-size:15px; font-weight:bold; margin-right: 8px;'>{i}.</span>
                 <div style='flex: 1;'>
                     <span style='color:{time_color}; font-weight:bold; font-size:15px;'>【{show_time}】</span>
-                    <span style='color:{forward_color}; font-weight:bold; margin:0 6px; font-size:15px;'>{forward_tag}</span>
+                    <!-- 仅改这行：间距从 0 6px 改为 0 1px，实现贴近效果 -->
+                    <span style='color:{forward_color}; font-weight:bold; margin:0 1px; font-size:15px;'>{forward_tag}</span>
                 </div>
             </div>
-            <!-- 【懂王】行：缩进为0，与【时间】左对齐 -->
             <p style='margin:{line_margin}; padding:0 0 0 {content_indent}; line-height:1.4; font-size:16px; color:{content_color}; margin-top:0;'>
                 {content_text}
             </p>
-            <!-- 查看原文行：同缩进，与【懂王】左对齐 -->
             <p style='margin:0; padding:0 0 0 {content_indent}; line-height:1.4; font-size:14px;'>
                 <span style='color:{arrow_color}; font-size:16px;'>👉</span>
                 <a href='{news_link}' target='_blank' style='color:{link_color}; text-decoration:none;'>查看原文</a>
