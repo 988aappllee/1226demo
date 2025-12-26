@@ -70,7 +70,7 @@ def parse_news_type_and_content(news):
         clean_text = re.sub(r'<.*?>', '', content, flags=re.DOTALL)
         clean_text = re.sub(r'https?://\S+', '', clean_text).strip()
         clean_text = re.sub(r'^(\s*RT[:\s]*|\s*@\w+:)', '', clean_text, flags=re.IGNORECASE)
-        trump_text = clean_text.strip() if clean_text and len(clean_text) > 2 else "无文字"
+        trump_text = clean_text.strip() if clean_text and len(clean_text) > 2 else "无发言"
         content_text = f"【懂王】：{trump_text}"
     else:
         clean_title = re.sub(r'https?://\S+', '', raw_title).strip()
