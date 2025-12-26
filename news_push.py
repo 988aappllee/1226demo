@@ -5,6 +5,7 @@ import requests
 import re
 import os
 import datetime
+from datetime import timezone, timedelta
 
 # ---------------------- Gmail配置（从GitHub Secret读取，不用改） ----------------------
 GMAIL_EMAIL = os.getenv("GMAIL_EMAIL")
@@ -22,46 +23,61 @@ REQUEST_HEADERS = {
     "Connection": "keep-alive"
 }
 
-# 优化：增强资讯时间提取逻辑（适配所有格式，不用改）
+# ✅ 核心修改：时间显示【北京时间 年-月-日 时:分】
 def get_show_time(news):
+    # 先尝试从content提取原始时间字符串（备用）
     content = news.get("content", [{}])[0].get("value", "") if news.get("content") else ""
-    time_patterns = [
-        r'(\d{2}:\d{2})<\/time>',
-        r'(\d{2}:\d{2}:\d{2})',
-        r'(\d{1,2}:\d{2}\s*[AP]M)',
-    ]
+    time_patterns = [r'(\d{2}:\d{2})<\/time>', r'(\d{2}:\d{2}:\d{2})', r'(\d{1,2}:\d{2}\s*[AP]M)']
+    raw_time = None
     for pattern in time_patterns:
         match = re.search(pattern, content, re.IGNORECASE)
         if match:
-            return match.group(1).strip()
+            raw_time = match.group(1).strip()
+            break
 
+    # 优先从updated/published字段提取ISO时间并转北京时间（含年月日）
     time_str = news.get("updated", news.get("published", ""))
     if not time_str:
         return "未知时间"
-    if 'T' in time_str:
-        time_part = time_str.split('T')[1].split('+')[0].split('-')[0]
-        if ':' in time_part:
-            return time_part[:5]
-    elif re.search(r'\d{2}:\d{2}', time_str):
-        return re.search(r'\d{2}:\d{2}', time_str).group(0)
-
+    
     try:
-        date_obj = datetime.datetime.strptime(time_str.split('T')[0], "%Y-%m-%d")
-        return date_obj.strftime("%m-%d")
+        # 解析ISO格式时间（如2025-12-26T12:59:00+00:00）
+        if 'T' in time_str:
+            dt = datetime.datetime.fromisoformat(time_str.replace('Z', '+00:00'))
+            beijing_tz = timezone(timedelta(hours=8))
+            dt_beijing = dt.astimezone(beijing_tz)
+            # 返回【年-月-日 时:分】格式
+            return dt_beijing.strftime("%Y-%m-%d %H:%M")
+        # 处理普通日期时间格式
+        elif re.search(r'\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}', time_str):
+            dt = datetime.datetime.strptime(time_str, "%Y-%m-%d %H:%M")
+            dt_beijing = dt + timedelta(hours=8)
+            return dt_beijing.strftime("%Y-%m-%d %H:%M")
+        # 仅日期的情况
+        elif re.search(r'\d{4}-\d{2}-\d{2}', time_str):
+            dt = datetime.datetime.strptime(time_str.split('T')[0], "%Y-%m-%d")
+            return dt.strftime("%Y-%m-%d") + " 未知时分"
+        # 只有时分的情况（结合当前日期补全）
+        elif raw_time and re.search(r'\d{2}:\d{2}', raw_time):
+            current_bj = datetime.datetime.now(beijing_tz)
+            return current_bj.strftime("%Y-%m-%d") + f" {raw_time}"
+        else:
+            return "未知时间"
     except:
-        return "未知时间"
+        # 兜底：用当前北京时间补全
+        current_bj = datetime.datetime.now(timezone(timedelta(hours=8)))
+        if raw_time and re.search(r'\d{2}:\d{2}', raw_time):
+            return current_bj.strftime("%Y-%m-%d") + f" {raw_time}"
+        else:
+            return current_bj.strftime("%Y-%m-%d %H:%M")
 
-# ✅ 核心精简规则（无任何多余代码，完美匹配你的要求）
-# 1. 转发贴 → 时间后加【转发贴】 + 换行【懂王】：无文字/说话内容
-# 2. 非转发贴 → 时间后无标注 + 换行【懂王】：原文标题
-# 3. 彻底删除【转发源为】所有相关功能，无残留
+# ✅ 核心规则（无任何多余代码）
 def parse_news_type_and_content(news):
     raw_title = news.get("title", "").strip()
     no_title_flags = ["[No Title]", "no title", "untitled", "- Post from "]
     is_forward = not raw_title or any(flag in raw_title for flag in no_title_flags)
     forward_tag = "【转发贴】" if is_forward else ""
 
-    # 提取懂王的文字内容（清洗所有冗余内容，只留纯文本）
     if is_forward:
         content = news.get("content", [{}])[0].get("value", "") if news.get("content") else ""
         clean_text = re.sub(r'<.*?>', '', content, flags=re.DOTALL)
@@ -116,21 +132,21 @@ def check_push():
         print("ℹ️  无新资讯，本次跳过推送")
         return False, None
 
-# 邮件样式+完美适配换行排版（【转发贴】标红醒目，不用改）
+# 邮件样式（匹配截图深色模式，不用改）
 def make_email_content(all_news):
     if not all_news:
-        return "<p style='font-size:16px; color:#333;'>暂无可用的Trump Truth资讯</p>"
+        return "<p style='font-size:16px; color:#FFFFFF;'>暂无可用的Trump Truth资讯</p>"
     news_list = all_news[:300]
 
     title_color = "#C8102E"
-    time_color = "#FF8C00"
-    serial_color = "#003366"
-    news_title_color = "#1A1A1A"
-    link_color = "#0066CC"
-    forward_color = "#E63946" # 【转发贴】红色醒目
+    time_color = "#1E90FF"  # 时间蓝色（匹配截图）
+    serial_color = "#FFFFFF" # 序号白色
+    news_title_color = "#FFFFFF" # 内容白色
+    link_color = "#1E90FF"   # 链接蓝色
+    forward_color = "#C8102E" # 【转发贴】红色
 
     email_title_html = f"""
-    <p style='margin: 0 0 20px 0; padding: 10px; background-color:#F5F5F5; border-left:4px solid {title_color};'>
+    <p style='margin: 0 0 20px 0; padding: 10px; background-color:#2D2D2D; border-left:4px solid {title_color};'>
         <strong><span style='color:{title_color}; font-size:20px;'>♥️ Trump Truth 每日速递</span></strong>
     </p>
     """
@@ -142,7 +158,7 @@ def make_email_content(all_news):
         forward_tag, content_text = parse_news_type_and_content(news)
         
         news_items.append(f"""
-        <div style='margin: 0 0 15px 0; padding: 10px; background-color:#FAFAFA; border-radius:4px;'>
+        <div style='margin: 0 0 15px 0; padding: 10px; background-color:#2D2D2D; border-radius:4px;'>
             <p style='margin: 0 0 8px 0; padding: 0; line-height:1.9; white-space: pre-line;'>
                 <span style='color:{serial_color}; font-size:15px; font-weight:bold;'>{i}.</span> 
                 <span style='color:{time_color}; font-weight: bold; font-size:15px;'>【{show_time}】</span>
@@ -173,7 +189,7 @@ def send_email(html_content):
         smtp.login(GMAIL_EMAIL, GMAIL_APP_PASSWORD)
         print(f"✅ Gmail连接成功，即将向{len(receivers)}个收件人发送资讯邮件")
 
-        current_bj_time = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8)))
+        current_bj_time = datetime.datetime.now(timezone(timedelta(hours=8)))
         bj_date = current_bj_time.strftime("%Y-%m-%d")
         for receiver in receivers:
             msg = MIMEText(html_content, "html", "utf-8")
@@ -197,9 +213,9 @@ def send_email(html_content):
 # 程序入口（不用改）
 if __name__ == "__main__":
     utc_now = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-    cst_now = (datetime.datetime.utcnow() + datetime.timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")
+    cst_now = datetime.datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S")
     print(f"==================================================")
-    print(f"📅 执行时间 | UTC：{utc_now} | 东八区：{cst_now}")
+    print(f"📅 执行时间 | UTC：{utc_now} | 北京时间：{cst_now}")
     print(f"📡 订阅源 | Trump Truth（{RSS_URL}）")
     print(f"==================================================")
 
@@ -212,4 +228,5 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"💥 程序异常：{str(e)}")
         raise
+
 
