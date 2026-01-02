@@ -14,12 +14,15 @@ RECEIVER_EMAILS = os.getenv("RECEIVER_EMAILS")
 SMTP_SERVER = "smtp.gmail.com"
 CUSTOM_NICKNAME = "📩懂王快讯"
 
-# ---------------------- 基础配置（不用改） ----------------------
+# ---------------------- 基础配置（已修复请求头） ----------------------
 RSS_URL = "https://www.trumpstruth.org/feed"
 LAST_LINK_FILE = "last_link.txt"
 REQUEST_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "*/*",
+    # 明确声明支持RSS/XML专属媒体类型，解决415错误
+    "Accept": "application/rss+xml, application/xml, text/xml, */*",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Cache-Control": "no-cache",
     "Connection": "keep-alive"
 }
 
@@ -78,12 +81,15 @@ def parse_news_type_and_content(news):
 
     return forward_tag, content_text
 
-# 抓取资讯（不用改，修正了拼写错误REQUEST_HEADERS）
+# ✅ 修复后：直接用feedparser解析URL，简化请求逻辑并解决415错误
 def fetch_news():
     try:
-        response = requests.get(RSS_URL, headers=REQUEST_HEADERS, timeout=15)
-        response.raise_for_status()
-        news_list = feedparser.parse(response.content).entries
+        # 直接通过feedparser请求并解析RSS，自动携带修正后的请求头
+        feed = feedparser.parse(RSS_URL, request_headers=REQUEST_HEADERS, timeout=15)
+        # 校验RSS解析是否出现格式/网络错误
+        if feed.get("bozo") != 0:
+            raise Exception(f"Feed解析错误: {feed.get('bozo_exception')}")
+        news_list = feed.entries
         if not news_list:
             print("📭 未抓取到任何Trump Truth资讯")
             return None, None
