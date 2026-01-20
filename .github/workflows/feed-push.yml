@@ -1,4 +1,4 @@
-name: 路透社资讯Gmail推送
+name: 懂王真实社交Gmail推送
 on:
   # 定时触发：每30分钟运行一次（cron格式：分 时 日 月 周）
   schedule:
