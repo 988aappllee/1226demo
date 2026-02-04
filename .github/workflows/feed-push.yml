@@ -2,7 +2,9 @@ name: 懂王真实社交Gmail推送
 on:
   # 定时触发：每30分钟运行一次（cron格式：分 时 日 月 周）
   schedule:
-    - cron: '*/60 * * * *'
+    #- cron: '*/60 * * * *'
+    - cron: '0 */2 * * *'
+
   # 手动触发：可以自己点击运行（方便测试）
   workflow_dispatch:
 
