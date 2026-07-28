@@ -1,9 +1,9 @@
 name: 懂王真实社交Gmail推送
 on:
-  # 定时触发：每30分钟运行一次（cron格式：分 时 日 月 周）
+  # 定时触发：北京时间每晚21点整运行
   schedule:
-    #- cron: '*/60 * * * *'
-    - cron: '0 */2 * * *'
+    - cron: '0 21 * * *'
+      timezone: Asia/Shanghai
 
   # 手动触发：可以自己点击运行（方便测试）
   workflow_dispatch:
@@ -30,11 +30,12 @@ jobs:
           GMAIL_EMAIL: ${{ secrets.GMAIL_EMAIL }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           RECEIVER_EMAILS: ${{ secrets.RECEIVER_EMAILS }}
-        run: python news_push.py  # 必须和步骤3的脚本文件名一致！
+        run: python news_push.py  # 必须和脚本文件名保持一致！
 
       - name: 保存防重复文件（避免重复推送）
         uses: actions/upload-artifact@v4
         with:
           name: last-link-file
           path: last_link.txt
-          retention-days: 7  # 文件保留7天，不占空间
+          retention-days: 7  # 文件保留7天，不占用存储空间
+
